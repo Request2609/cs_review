@@ -258,6 +258,109 @@ cmp dst src
 cmp dst, src
 
 cmp 为比较指令，与减法指令类似，完成dst的内容减去src的内容，设置psw中状态标识位但结果不保存在dst中
+若两个数相减结果为０，则两个数相等，则zf=1
+sf等同于最高位
+cf、of视具体情况而定，当两个无符号数进行比较的时候,如果cf=0、zf=0，则表示dst>src，如果cf=1则表示
+dst<src
+当两个有符号数进行比较的时候，of=1表示产生了溢出，但大小的比较要根据of和sf共同决定
 
+增量减量指令
+inc dst
+dec dst
+影响的psw值：af, of, sf, zf，pf但是不会影响cf位
+乘法除法指令
+mul src 无符号相乘
+imul src　有符号数相乘
+乘数隐藏在al中
+当src为字节时，mul和imul为字节运算，这时将al中的数与src相乘，存在ax中
+当src是字数据的时候，mul和imul为字运算，这时表示将ax中的数与src相乘，结果的高16位存在dx中，低16为存在ax中
+mul和imul指令只对psw中的cf，of影响：
+当采用mul进行运算的时候，字运算结果的dx为0时，cf=0，of=0，表示两个字相乘结果也为一个字
+字节运算结果的ah为0时，cf=0，of=0，表示两个字节相乘结果为一个字节，否则cf=1，of=1
+当采用imul运算的时候，字运算结果的dx为符号扩展时，cf=0，of=0，表示两个字节相乘结果可以用一个字来表示；字节运算结果的ah为扩展时。
+cf=0，of=0，表示两个字节现场相乘结果也可以用一个字节表示，否则cf=1,of=1
 
+除法指令
+div src 
+idiv src
 
+当src为字节时，div和idiv为字节运算，这时表示将ax中的16位二进制数除以8位二进制数，其结果的商保存在al中，余数保存在ah中
+当src为字时，div和idiv为字运算，这时表示将dx与ax联合构成32位二进制数src，其结果的商保存在ax中，余数保存在dx中
+div和idiv不影响psw的值
+符号扩展指令　cbw //将al中的符号扩展到ah中，形成一个字ax
+cwd 将ax中的符号扩展到dx，形成双字 dx:ax
+逻辑与指令　and dst ,src  对两个操作数进行逻辑与运算，并设置psw的标志位，指令中的dst可以取通用寄存器、存储单元，src可以
+取通用寄存器，存储单元和立即数，但是dst和rsc不能同时为存储单元
+or 对两个操作数进行逻辑或操作，并设置psw中的标志位，指令中的dst和src的说明等同于and指令
+
+xor异或
+
+移位指令　shr dst,cnt逻辑右移 cnt表示移位的数量
+sar dst,cnt   算数右移指令
+shl/sal dst,cnt 算数左移指令
+ror dst, cnt 循环右移指令
+rcr 循环左移指令
+rcl带进位循环左移指令
+rcr 带进位循环右移指令
+
+clc cf清零
+stc   cf置位
+cli  if清０
+cmc cf取反
+sti if置位打开中断
+std  df置位
+cld  df清零
+
+转移指令：
+jmp label  转移到label处开始执行
+label为标号，当label与该转移指令位于同一段的时候，则为段内直接转移，转移目的地址cs不变
+ip<-(ip)+disp16 其中disp16表示转移目标地址与jmp转移指令之间16位偏移量，也称为近转移
+当偏移量是8位以内的时候，是短转移
+有条件转移指令
+jc label cf=1 有进位就跳转
+jnc label 无进位就跳转
+je/jz label zf=1　相等就跳转
+jne/jnz label　不相等跳转
+js label sf=1 负数，跳转
+jns label sf=0 正数　跳转
+jo label 有溢出　
+....
+
+循环控制指令
+
+loop label cx!=0时跳转
+loopz/loope label cx!=0 zf=1的时候跳转
+loopnz/loopne cx!=0 zf=0的时候跳转
+jcxz cx= 0的时候跳转
+
+中断调用指令
+在执行该指令的时候，会进行如下操作：
+(1)psw、cs、ip入栈
+(2)清除if，tf标志
+(3)从中断向量表中取出中断向量
+(4)转到中断调用程序子程序执行
+(5)中断服务子程序的最后一条指令应该是中断返回指令，执行指令可以返回到中断处理处执行
+
+中断返回指令
+IRET
+
+中断向量表
+每个中断服务子程序的入口地址为32位，占用4个地址单元。计算机中采用最低1024个地址单元来存储中断向量
+可以从该地址获得中断服务子程序的入口地址
+movsb 字节传送　es:di<-ds:si  si<-si+/-1  di<-di+/-1
+movsw 字传送　es:si<-ds:si si<-si+/-2  di<-di+/-2
+movs dst, src 当dst和src为字节类型的时候，等同于movsb指令
+为子类型的时候，等同于mowsw
+mov var1, var2 完成了ds:si中的内容向es:di指定的位置
+
+字符串比较指令
+cmpsb  ds:si-es:di 字节操作
+cmpsw ds:si-es:di　字操作
+cmps dst,src
+
+repz cmps  比较两个字符串，当遇到第一个不相同的字符时，就跳出比较循环　zf=0
+repnz cmps　当遇到相等的两个字符的时候，就跳出比较循环
+
+输入输出指令
+端口输入指令　IN dst, src 表示cpu从端口读取数据，dst指定存取数据的寄存器，这里只能取ax, al
+端口输出指令
